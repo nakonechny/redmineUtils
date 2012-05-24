@@ -1,0 +1,6 @@
+[submodule "ext/naf"]
+	path = ext/naf
+	url = git@github.com:nakonechny/naf.git
+[submodule "ext/phpactiveresource"]
+	path = ext/phpactiveresource
+	url = git://github.com/lux/phpactiveresource.git
