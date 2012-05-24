@@ -10,10 +10,8 @@ class Issue extends ActiveResource
 
     public function __construct($data = array())
     {
-        $redmine_config = Naf::config('redmine');
-        $this->site = 'http://'.$redmine_config['api_key'].'@'.$redmine_config['domain'].'/';
+        $this->site = 'http://'.Naf::config('redmine.api_key').'@'.Naf::config('redmine.domain').'/';
         parent::__construct($data);
-
     }
 
     public function count()

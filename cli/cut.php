@@ -29,13 +29,10 @@ $stty_term = $sttyStatusCmd->exec();
 $sttyRestoreCmd = new ShellCmd('stty '.$stty_term);
 $stty1CharCmd = new ShellCmd('stty -icanon');
 
-$issueIdThreshold = Naf::config('issue_id_threshold');
-$askBeforeCut = Naf::config('ask_before_cut');
-
 foreach (new PregMatchIterator($branchPattern, $list) as $matches)
 {
     $issueId = $matches[2];
-    if ($issueId >= $issueIdThreshold) {
+    if ($issueId >= Naf::config('cut.issue_id_threshold')) {
 	    continue;
     }
 
@@ -49,7 +46,7 @@ foreach (new PregMatchIterator($branchPattern, $list) as $matches)
         echo '['.$issue->status['name'].'] ';
         if (in_array($issue->status['id'], $closedStatusIds))
         {
-	    if ($askBeforeCut) {
+	    if (Naf::config('cut.ask_before_cut')) {
                 echo "Удалить ветку? (y/N) ";
 
                 $stty1CharCmd->exec();
