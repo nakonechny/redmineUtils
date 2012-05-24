@@ -1,7 +1,7 @@
 <?php
 
 $settings['autoload_map'] = array(
-    'ActiveResource' => ROOT.'ext/phpactiveresource/'
+    'ActiveResource' => ROOT.'ext/phpactiveresource/',
 );
 
 $settings['redmine'] = array(
@@ -12,4 +12,9 @@ $settings['redmine'] = array(
 $settings['cut'] = array(
     'issue_id_threshold' => 13200,
     'ask_before_cut' => false,
+);
+
+$settings['hamster'] = array(
+    'path_to_db' => '~/.local/share/hamster-applet/hamster.db',
+
 );
