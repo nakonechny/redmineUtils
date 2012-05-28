@@ -2,16 +2,13 @@
 
 $settings['autoload_map'] = array(
     'ActiveResource' => ROOT.'ext/phpactiveresource/',
+    'Zend' => ROOT.'ext/zf2/',
 );
 
 $settings['redmine'] = array(
     'api_key' => 'put_your_redmine_api_key_here',
     'domain' => 'put_your_redmine_domain_here',
-);
-
-$settings['cut'] = array(
-    'issue_id_threshold' => 13200,
-    'ask_before_cut' => false,
+    'closed_issue_status_ids' => array(5, 6),
 );
 
 $settings['hamster'] = array(

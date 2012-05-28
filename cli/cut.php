@@ -1,38 +1,63 @@
+#!/usr/bin/env php
 <?php
 require_once __DIR__.'/../setup.php';
 
 use \naf\util\ShellCmd;
-use \naf\util\ShellCmd\Fault as ShellCmdFault;
 use \redmine\Issue;
+use \Zend\Console\Getopt;
 
-$branchPattern = '~(origin/)?task-([0-9]+)(-.+)?~';
-$closedStatusIds = array(
-    5,//выполнен
-    6,//отказ
+$rules = array(
+    'help|h' => 'Get usage message',
+    'dir|d=s' => 'Path to a git working copy',
+    'remote|r' => 'Consider only remote branches',
+    'all|a' => 'Consider all branches, local and remote',
+    'force|f' => 'Do not ask for confirmation before deleting every branch',
+    'before|b=i' => 'Consider only branches that bound to issue_id lesser than given value',
 );
 
-$gitWorkingCopyDir = @$_SERVER['argv'][1];
-
-$branchCmd = new ShellCmd('cd '.$gitWorkingCopyDir .' && git branch');
-
-if (@$_SERVER['argv'][2] == 'remote') {
-    $branchCmd->addOption('--remote'); //remote branches
-} else if (@$_SERVER['argv'][2] == 'all') {
-    $branchCmd->addOption('--all'); //all branches
+try {
+    $opts = new Getopt($rules);
+    $opts->parse();
+} catch (\Zend\Console\Exception\ExceptionInterface $e) {
+    echo $e->getMessage();
+    exit(2);
 }
 
-$output = $branchCmd->exec();
+// Help requested
+if ($opts->getOption('h')) {
+    echo $opts->getUsageMessage();
+    exit();
+}
+
+if (!isset($opts->dir)) {
+    echo "Must provide a path to git working copy via the -d or --dir option\n\n";
+    echo $opts->getUsageMessage();
+    exit(2);
+}
+
+$gitWorkingCopyDir = $opts->dir;
+if (!is_dir($gitWorkingCopyDir)) {
+    printf("Unable to read from provided directory '%s'\n\n", $gitWorkingCopyDir);
+    echo $opts->getUsageMessage();
+    exit(2);
+}
+
+$branchListCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git branch');
+if (isset($opts->all)) {
+    $branchListCmd->addOption('--all');
+} else if (isset($opts->remote)) {
+    $branchListCmd->addOption('--remote');
+}
+$output = $branchListCmd->exec();
 $list = explode("\n", $output);
 
-$sttyStatusCmd = new ShellCmd('stty --save');
-$stty_term = $sttyStatusCmd->exec();
-$sttyRestoreCmd = new ShellCmd('stty '.$stty_term);
-$stty1CharCmd = new ShellCmd('stty -icanon');
+$charInput = new SttyCharInput();
+$confirmed = true;
 
-foreach (new PregMatchIterator($branchPattern, $list) as $matches)
+foreach (new PregMatchIterator('~(origin/)?task-([0-9]+)(-.+)?~', $list) as $matches)
 {
     $issueId = $matches[2];
-    if ($issueId >= Naf::config('cut.issue_id_threshold')) {
+    if (isset($opts->before) && $issueId >= $opts->before) {
 	    continue;
     }
 
@@ -44,30 +69,25 @@ foreach (new PregMatchIterator($branchPattern, $list) as $matches)
     $issue->find($issueId);
     if ($issue->count()) {
         echo '['.$issue->status['name'].'] ';
-        if (in_array($issue->status['id'], $closedStatusIds))
+        if (in_array($issue->status['id'], Naf::config('redmine.closed_issue_status_ids')))
         {
-	    if (Naf::config('cut.ask_before_cut')) {
-                echo "Удалить ветку? (y/N) ";
+            if (!$opts->force) {
+                echo 'Delete '.($isRemote?'remote':'local').' branch? (y/N) ';
+                $confirmed = $charInput->confirm();
+            }
 
-                $stty1CharCmd->exec();
-                $c = fread(STDIN, 1);
-                $sttyRestoreCmd->exec();
-	    } else {
-	        $c = 'y';
-	    }
-
-            if (in_array($c, array('y', 'Y'))) {
+            if ($confirmed) {
                 if ($isRemote) {
-                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir . '&& git push origin :'.str_replace('origin/', '', $branchName));
+                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git push origin :'.str_replace('origin/', '', $branchName));
                 } else {
-                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir . '&& git branch -d '.$branchName);
+                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git branch -D '.$branchName);
                 }
-		try {
+                try {
                     $deleteCmd->exec();
-                    echo ' Удалено';
-		} catch (ShellCmdFault $e) {
-			echo $e->getMessage();
-		}
+                    echo ' Deleted';
+                } catch (ShellCmd\Fault $e) {
+                    echo $e->getMessage();
+                }
             }
         }
     } else {

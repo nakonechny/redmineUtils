@@ -1,25 +1,56 @@
+#!/usr/bin/env php
 <?php
 require_once __DIR__.'/../setup.php';
 
 use \naf\util\ShellCmd;
 use \redmine\Issue;
+use \Zend\Console\Getopt;
 
-$branchPattern = '~task-([0-9]+)(-.+)?~';
+$rules = array(
+    'help|h' => 'Get usage message',
+    'dir|d=s' => 'Path to a git working copy',
+    'remote|r' => 'Consider only remote branches',
+    'all|a' => 'Consider all branches, local and remote',
+);
 
-$gitWorkingCopyDir = @$_SERVER['argv'][1];
-
-$branchCmd = new ShellCmd('cd '.$gitWorkingCopyDir .' && git branch');
-
-if (@$_SERVER['argv'][2] == 'remote') {
-    $branchCmd->addOption('--remote'); //remote branches
-} else if (@$_SERVER['argv'][2] == 'all') {
-    $branchCmd->addOption('--all'); //all branches
+try {
+    $opts = new Getopt($rules);
+    $opts->parse();
+} catch (\Zend\Console\Exception\ExceptionInterface $e) {
+    echo $e->getMessage();
+    exit(2);
 }
 
-$output = $branchCmd->exec();
+// Help requested
+if ($opts->getOption('h')) {
+    echo $opts->getUsageMessage();
+    exit();
+}
+
+if (!isset($opts->dir)) {
+    echo "Must provide a path to git working copy via the -d or --dir option\n\n";
+    echo $opts->getUsageMessage();
+    exit(2);
+}
+
+$gitWorkingCopyDir = $opts->dir;
+if (!is_dir($gitWorkingCopyDir)) {
+    printf("Unable to read from provided directory '%s'\n\n", $gitWorkingCopyDir);
+    echo $opts->getUsageMessage();
+    exit(2);
+}
+
+$branchListCmd = new ShellCmd('cd '.$gitWorkingCopyDir .' && git branch');
+
+if (isset($opts->all)) {
+    $branchListCmd->addOption('--all');
+} else if (isset($opts->remote)) {
+    $branchListCmd->addOption('--remote');
+}
+$output = $branchListCmd->exec();
 $list = explode("\n", $output);
 
-foreach (new PregMatchIterator($branchPattern, $list) as $matches)
+foreach (new PregMatchIterator('~task-([0-9]+)(-.+)?~', $list) as $matches)
 {
     $issueId = $matches[1];
     $branchName = $matches[0];
