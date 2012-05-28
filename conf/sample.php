@@ -13,5 +13,5 @@ $settings['redmine'] = array(
 
 $settings['hamster'] = array(
     'path_to_db' => '~/.local/share/hamster-applet/hamster.db',
-
+    'tag_text' => 'in redmine',
 );
