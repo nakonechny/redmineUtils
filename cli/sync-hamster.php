@@ -64,6 +64,11 @@ foreach (Db::selectFactsByDate($date)->fetchAll() as $fact) {
         'activity_id' => (string)Naf::config('redmine.activity.development'),
     ));
     $entry->save();
+    if (! $entry->id) {
+        echo " error\n";
+        continue;
+    }
+
     echo ' '.$hours.'H';
 
     Db::tagFactBy($fact['id'], $redmineTagId);
