@@ -51,12 +51,15 @@ class Db
     static public function selectFactsByDate($date)
     {
         $stmt = static::getConnection()->prepare('
-              SELECT a.name, f.start_time, f.end_time, f.id,
-                  (strftime("%s", f.end_time) - strftime("%s", f.start_time))/3600.0 as hours_spent
-              FROM facts as f
-              LEFT JOIN activities as a ON a.id = f.activity_id
-              WHERE date(f.start_time) = ?
-              ');
+            SELECT a.name,
+                   f.start_time,
+                   f.end_time,
+                   f.id,
+                   (strftime("%s", f.end_time) - strftime("%s", f.start_time))/3600.0 as hours
+            FROM facts as f
+            LEFT JOIN activities as a ON a.id = f.activity_id
+            WHERE date(f.start_time) = ? and f.end_time is not null
+        ');
         $stmt->execute(array($date));
         $stmt->setFetchMode(PDO::FETCH_ASSOC);
 

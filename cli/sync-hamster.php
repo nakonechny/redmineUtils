@@ -4,6 +4,7 @@ require_once __DIR__.'/../setup.php';
 
 use \hamster\Db;
 use \Zend\Console\Getopt;
+use \redmine\TimeEntry;
 
 $rules = array(
     'help|h' => 'Get usage message',
@@ -40,7 +41,7 @@ if ($ts) {
 $redmineTagId = Db::assertTagId(Naf::config('hamster.tag_text'));
 
 foreach (Db::selectFactsByDate($date)->fetchAll() as $fact) {
-    echo $fact['name'].' .. ';
+    echo $fact['name'].' ..';
 
     $matches = null;
     if (! preg_match('~#([0-9]+)~', $fact['name'], $matches)) {
@@ -54,7 +55,16 @@ foreach (Db::selectFactsByDate($date)->fetchAll() as $fact) {
         continue;
     }
 
-    /** @todo sync here */
+    $hours = round($fact['hours'], 1);
+    $entry = new TimeEntry(array(
+        'issue_id' => $issue_id,
+        'spent_on' => $date,
+        'hours' => (string)$hours,
+        'comments' => '',
+        'activity_id' => (string)Naf::config('redmine.activity.development'),
+    ));
+    $entry->save();
+    echo ' '.$hours.'H';
 
     Db::tagFactBy($fact['id'], $redmineTagId);
     echo " ok\n";
