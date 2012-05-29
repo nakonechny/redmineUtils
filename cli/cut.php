@@ -54,7 +54,7 @@ $list = explode("\n", $output);
 $charInput = new SttyCharInput();
 $confirmed = true;
 
-foreach (new PregMatchIterator('~(origin/)?task-([0-9]+)(-.+)?~', $list) as $matches)
+foreach (new PregMatchIterator('~(origin/)?task-([0-9]+)(-.+)?$~', $list) as $matches)
 {
     $issueId = $matches[2];
     if (isset($opts->before) && $issueId >= $opts->before) {

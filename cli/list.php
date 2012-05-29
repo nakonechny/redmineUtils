@@ -50,7 +50,7 @@ if (isset($opts->all)) {
 $output = $branchListCmd->exec();
 $list = explode("\n", $output);
 
-foreach (new PregMatchIterator('~task-([0-9]+)(-.+)?~', $list) as $matches)
+foreach (new PregMatchIterator('~task-([0-9]+)(-.+)?$~', $list) as $matches)
 {
     $issueId = $matches[1];
     $branchName = $matches[0];
