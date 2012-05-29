@@ -3,7 +3,11 @@ redmineUtils
 
 Some handy utils to associate a git working copy with respective redmine tracker
 
-## Examples
+## Pull down submodules
+
+    git submodule update --init  #from project root
+
+## Usage examples
 
     cli/cut.php --dir ~/hello_world #deletes all local branches that have "closed" status in redmine
     cli/cut.php --dir ~/hello_world --remote #deletes all remote branches (in origin) that are of status 'closed' in redmine
