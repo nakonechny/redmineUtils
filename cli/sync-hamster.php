@@ -64,7 +64,7 @@ foreach (Db::selectFactsByDate($date)->fetchAll() as $fact) {
         'activity_id' => (string)Naf::config('redmine.activity.development'),
     ));
     $entry->save();
-    if (! $entry->id) {
+    if (! $entry->id) { //id property is served by __get() method
         echo " error\n";
         continue;
     }
