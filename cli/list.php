@@ -4,12 +4,14 @@ require_once __DIR__.'/../setup.php';
 
 use \naf\util\ShellCmd;
 use \redmine\Issue;
+use \git\Branch;
 use \Zend\Console\Getopt;
 
 $rules = array(
     'help|h' => 'Get usage message',
     'dir|d=s' => 'Path to a git working copy',
     'remote|r' => 'Consider only remote branches',
+    'merged|m' => 'Consider only fully merged branches',
     'all|a' => 'Consider all branches, local and remote',
 );
 
@@ -40,15 +42,7 @@ if (!is_dir($gitWorkingCopyDir)) {
     exit(2);
 }
 
-$branchListCmd = new ShellCmd('cd '.$gitWorkingCopyDir .' && git branch');
-
-if (isset($opts->all)) {
-    $branchListCmd->addOption('--all');
-} else if (isset($opts->remote)) {
-    $branchListCmd->addOption('--remote');
-}
-$output = $branchListCmd->exec();
-$list = explode("\n", $output);
+$list = Branch::enlist($gitWorkingCopyDir, isset($opts->remote), isset($opts->merged));
 
 foreach (new PregMatchIterator('~task-([0-9]+)(-.+)?$~', $list) as $matches)
 {

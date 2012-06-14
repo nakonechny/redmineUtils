@@ -4,13 +4,14 @@ require_once __DIR__.'/../setup.php';
 
 use \naf\util\ShellCmd;
 use \redmine\Issue;
+use \git\Branch;
 use \Zend\Console\Getopt;
 
 $rules = array(
     'help|h' => 'Get usage message',
     'dir|d=s' => 'Path to a git working copy',
     'remote|r' => 'Consider only remote branches',
-    'all|a' => 'Consider all branches, local and remote',
+    'merged|m' => 'Consider only fully merged branches',
     'force|f' => 'Do not ask for confirmation before deleting every branch',
     'before|b=i' => 'Consider only branches that bound to issue_id lesser than given value',
 );
@@ -42,28 +43,22 @@ if (!is_dir($gitWorkingCopyDir)) {
     exit(2);
 }
 
-$branchListCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git branch');
-if (isset($opts->all)) {
-    $branchListCmd->addOption('--all');
-} else if (isset($opts->remote)) {
-    $branchListCmd->addOption('--remote');
-}
-$output = $branchListCmd->exec();
-$list = explode("\n", $output);
+$list = Branch::enlist($gitWorkingCopyDir, isset($opts->remote), isset($opts->merged));
 
 $charInput = new SttyCharInput();
 $confirmed = true;
 
-foreach (new PregMatchIterator('~(origin/)?task-([0-9]+)(-.+)?$~', $list) as $matches)
+foreach (new PregMatchIterator('~^(.*)/task-([0-9]+)(-.+)?$~', $list) as $matches)
 {
     $issueId = $matches[2];
     if (isset($opts->before) && $issueId >= $opts->before) {
 	    continue;
     }
 
-    $branchName = $matches[0];
-    $isRemote = ! empty($matches[1]);
-    echo $issueId.': '.$branchName.' ';
+    $branchFullName = $matches[0];
+    echo $issueId.': '.$branchFullName.' ';
+
+    $branch = new Branch($gitWorkingCopyDir, $branchFullName);
 
     $issue = new Issue();
     $issue->find($issueId);
@@ -72,18 +67,13 @@ foreach (new PregMatchIterator('~(origin/)?task-([0-9]+)(-.+)?$~', $list) as $ma
         if (in_array($issue->status['id'], Naf::config('redmine.closed_issue_status_ids')))
         {
             if (!$opts->force) {
-                echo 'Delete '.($isRemote?'remote':'local').' branch? (y/N) ';
+                echo 'Delete '.($branch->isRemote()?'remote':'local').' branch? (y/N) ';
                 $confirmed = $charInput->confirm();
             }
 
             if ($confirmed) {
-                if ($isRemote) {
-                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git push origin :'.str_replace('origin/', '', $branchName));
-                } else {
-                    $deleteCmd = new ShellCmd('cd '.$gitWorkingCopyDir.' && git branch -D '.$branchName);
-                }
                 try {
-                    $deleteCmd->exec();
+                    $branch->delete();
                     echo ' Deleted';
                 } catch (ShellCmd\Fault $e) {
                     echo $e->getMessage();
